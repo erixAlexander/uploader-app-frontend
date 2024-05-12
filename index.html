@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' https://cdnjs.cloudflare.com"
+    />
+    <title>File-Uploader</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="path-container">
+      <div id="btn-div" class="btn-div">
+        <img id="btn-path" src="./public/folder-solid.svg" alt="folder-icon" />
+      </div>
+      <p id="tag-path"></p>
+    </div>
+
+    <div class="status-container">
+      <span class="status-text on" id="status">ON</span>
+      <div class="btns-container">
+        <button id="btn-restart" type="button">Reiniciar</button>
+      </div>
+    </div>
+
+    <div class="search-container">
+      <label id="search-label" for="search"
+        >Buscar el link de un archivo:</label
+      >
+      <div class="search-input-container">
+        <input id="search" type="text" placeholder="Nombre del archivo..." />
+        <button id="btn-search" type="button">Buscar</button>
+      </div>
+    </div>
+
+    <div class="search-results-container">
+      <div id="search-result" class="result"></div>
+    </div>
+
+    <script src="./renderer.js"></script>
+  </body>
+</html>
