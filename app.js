@@ -53,8 +53,7 @@ async function uploadFile(filePath, event) {
     const { mtime } = await fs.stat(filePath);
 
     // Create a hash of the file data
-    const dataString =
-      filePath + fileName + mtime.getTime() + fileData.toString("base64");
+    const dataString = fileName + mtime.getTime() + fileData.toString("base64");
     const hash = crypto.createHash("sha256");
     hash.update(dataString);
     const fileHash = hash.digest("hex");
