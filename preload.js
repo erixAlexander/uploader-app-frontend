@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   selectFolder: () => ipcRenderer.invoke("select-folder"),
   getFolderPath: () => ipcRenderer.invoke("get-folder-path"),
   startWatcher: () => ipcRenderer.invoke("start-watcher"),
+  rescanFolder: () => ipcRenderer.invoke("rescan-folder"),
+  toggleTestMode: () => ipcRenderer.invoke("toggle-test-mode"),
   openURL: (url) => ipcRenderer.invoke("open-url", url),
   receive: (channel, func) => {
     ipcRenderer.on(channel, (event, ...args) => func(...args));

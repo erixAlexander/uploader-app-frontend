@@ -7,16 +7,51 @@ const crypto = require("crypto");
 
 // Variables
 let folderPath = null;
-const apiUrl = "https://uploader-app-service-tpdnlyeuqa-uc.a.run.app/api";
-// const apiUrl = "http://localhost:8000/api";
+const PROD_URL = "https://uploader-app-service-tpdnlyeuqa-uc.a.run.app/api";
+const TEST_URL = "http://localhost:8000/api";
+let currentApiUrl = PROD_URL; // Default to PROD
+let testModeTimeout = null;
+
 const dummyToken = "dummy-auth-token";
+
+// Helper to get URL
+const getApiUrl = () => currentApiUrl;
+
+// Function to switch modes
+const toggleTestMode = (event) => {
+  if (currentApiUrl === PROD_URL) {
+    // Switch to TEST
+    currentApiUrl = TEST_URL;
+    // Set 30 minute timer to revert
+    if (testModeTimeout) clearTimeout(testModeTimeout);
+    testModeTimeout = setTimeout(
+      () => {
+        currentApiUrl = PROD_URL;
+        if (testModeTimeout) clearTimeout(testModeTimeout);
+        testModeTimeout = null;
+        // Notify renderer
+        if (event && event.sender) {
+          event.sender.send("mode-changed", "PROD");
+        }
+      },
+      30 * 60 * 1000,
+    ); // 30 minutes
+    return "TEST";
+  } else {
+    // Switch back to PROD manually
+    currentApiUrl = PROD_URL;
+    if (testModeTimeout) clearTimeout(testModeTimeout);
+    testModeTimeout = null;
+    return "PROD";
+  }
+};
 
 // Function to log errors to a file
 const errorLogger = (
   errorMessage,
   serverErrorMessage,
   fileExtension,
-  fileName
+  fileName,
 ) => {
   const logMessage = `${new Date().toISOString()} - Error uploading file: ${errorMessage}, Server error: ${
     serverErrorMessage || "No server error message or no response from server"
@@ -48,21 +83,41 @@ async function uploadFile(filePath, event) {
   }
 
   try {
+    // Check file stats first
+    const stats = await fs.stat(filePath);
+    const mtime = stats.mtime;
+
+    // Safety check: Limit file size to 300MB to prevent memory crashes
+    const fileSizeInMB = stats.size / (1024 * 1024);
+    if (fileSizeInMB > 300) {
+      errorLogger(
+        "File too large (>300MB)",
+        "Skipped by client safety limit",
+        fileExtension,
+        fileName,
+      );
+      return;
+    }
+
     // Read the file data
     const fileData = await fs.readFile(filePath);
-    const { mtime } = await fs.stat(filePath);
+
+    // Optimization: Convert to base64 ONCE to save memory
+    const base64Data = fileData.toString("base64");
 
     // Create a hash of the file data
-    const dataString = fileName + mtime.getTime() + fileData.toString("base64");
+    // We update hash in parts to avoid creating a huge string in memory
     const hash = crypto.createHash("sha256");
-    hash.update(dataString);
+    // Equivalent to: fileName + mtime.getTime() + base64Data
+    hash.update(fileName + mtime.getTime());
+    hash.update(base64Data);
     const fileHash = hash.digest("hex");
 
     // Send the file data to the API
     await axios.post(
-      apiUrl + "/file-upload",
+      getApiUrl() + "/file-upload",
       {
-        fileData: fileData.toString("base64"),
+        fileData: base64Data,
         fileExtension,
         fileName,
         fileHash,
@@ -72,7 +127,7 @@ async function uploadFile(filePath, event) {
           Authorization: `Bearer ${dummyToken}`,
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     // Send a message to the renderer process
@@ -100,7 +155,7 @@ async function uploadFile(filePath, event) {
         error?.message,
         error?.response?.data?.message,
         fileExtension,
-        fileName
+        fileName,
       );
       if (status !== "OFF") {
         event.sender.send("from-main", "OFF");
@@ -113,7 +168,7 @@ async function uploadFile(filePath, event) {
 // Function to search for a file in the API
 const fileSearch = async (fileName) => {
   try {
-    const response = await axios.post(apiUrl + "/find", {
+    const response = await axios.post(getApiUrl() + "/find", {
       fileName,
       headers: {
         Authorization: `Bearer ${dummyToken}`,
@@ -144,7 +199,7 @@ const writePathToFile = (filePath) => {
 const readPathFromFile = () => {
   return fs.readFileSync(
     path.join(__dirname, "./config/folderPath.txt"),
-    "utf8"
+    "utf8",
   );
 };
 
@@ -156,7 +211,8 @@ const startWatcher = async (folderPath, event) => {
   if (watcherInstance) {
     watcherInstance.close();
   }
-  watcherInstance = chokidar.watch(folderPath);
+  // Changed ignoreInitial to true to avoid re-uploading all files on startup
+  watcherInstance = chokidar.watch(folderPath, { ignoreInitial: true });
   watcherInstance.on("add", async (filePath) => {
     try {
       await uploadFile(filePath, event);
@@ -166,6 +222,36 @@ const startWatcher = async (folderPath, event) => {
   });
   // console.log("Watcher started");
   return;
+};
+
+// Function to manually rescan the folder
+const rescanFolder = async (event) => {
+  const currentFolderPath = readPathFromFile();
+  if (
+    !currentFolderPath ||
+    currentFolderPath === "" ||
+    !fs.existsSync(currentFolderPath)
+  ) {
+    return;
+  }
+
+  try {
+    const files = await fs.readdir(currentFolderPath);
+    for (const file of files) {
+      const fullPath = path.join(currentFolderPath, file);
+      try {
+        const stats = await fs.stat(fullPath);
+        if (stats.isFile()) {
+          // We reuse the existing upload logic
+          await uploadFile(fullPath, event);
+        }
+      } catch (err) {
+        console.error("Error processing file during scan:", file, err.message);
+      }
+    }
+  } catch (error) {
+    console.error("Error rescanning folder:", error.message);
+  }
 };
 
 // Function to watch the folder
@@ -214,4 +300,6 @@ module.exports = {
   fileSearch,
   writePathToFile,
   readPathFromFile,
+  rescanFolder,
+  toggleTestMode,
 };

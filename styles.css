@@ -53,8 +53,23 @@ body {
   background-color: #1f59c0;
 }
 
+#btn-rescan {
+  padding: 0.5rem 1rem;
+  font-size: 1.2rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  background-color: #04995b;
+  color: #fff;
+}
+
+#btn-rescan:hover {
+  background-color: #047647;
+}
+
 .search-container {
-  display: flex;
+  display: none;
   flex-direction: column;
   justify-content: center;
   align-items: center;
@@ -95,7 +110,7 @@ body {
 }
 
 .search-results-container {
-  display: flex;
+  display: none;
   flex-direction: column;
   justify-content: center;
   align-items: center;
@@ -187,4 +202,34 @@ body {
   font-size: 0.8rem;
   font-weight: 400;
   margin: 0;
+}
+
+.test-mode-container {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+}
+
+#btn-test-mode {
+  padding: 0.5rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  background-color: #9e9e9e; /* Grey by default */
+  color: #fff;
+  opacity: 0.7; /* Discrete */
+  transition: all 0.3s ease;
+}
+
+#btn-test-mode:hover {
+  opacity: 1;
+}
+
+#btn-test-mode.active {
+  background-color: #ff9800; /* Orange/Red for Test Mode */
+  font-weight: bold;
+  opacity: 1;
+  box-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
 }

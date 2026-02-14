@@ -6,6 +6,8 @@ const {
   fileSearch,
   writePathToFile,
   readPathFromFile,
+  rescanFolder,
+  toggleTestMode,
 } = require("./app.js");
 const { dialog, shell } = require("electron");
 
@@ -54,17 +56,27 @@ const handleStartWatcher = (event) => {
   return watcher(event);
 };
 
+const handleRescanFolder = (event) => {
+  return rescanFolder(event);
+};
+
+const handleToggleTestMode = (event) => {
+  return toggleTestMode(event);
+};
+
 const handleOpenURL = (event, url) => {
   shell.openExternal(url);
 };
 
 app.whenReady().then(() => {
   ipcMain.handle("start-watcher", handleStartWatcher);
+  ipcMain.handle("rescan-folder", handleRescanFolder);
   ipcMain.handle("search-file", handleSearchFile);
   ipcMain.handle("restart-switch", handleRestartSwitch);
   ipcMain.handle("select-folder", handleSelectFolder);
   ipcMain.handle("get-folder-path", handleGetFolderPath);
   ipcMain.handle("open-url", handleOpenURL);
+  ipcMain.handle("toggle-test-mode", handleToggleTestMode);
   createWindow();
 
   app.on("activate", function () {

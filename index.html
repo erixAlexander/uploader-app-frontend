@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <meta charset="UTF-8" />
@@ -21,6 +21,7 @@
       <span class="status-text on" id="status">ON</span>
       <div class="btns-container">
         <button id="btn-restart" type="button">Reiniciar</button>
+        <button id="btn-rescan" type="button">Rescanear</button>
       </div>
     </div>
 
@@ -36,6 +37,11 @@
 
     <div class="search-results-container">
       <div id="search-result" class="result"></div>
+    </div>
+
+    <!-- Test Mode Button Container (Bottom Left) -->
+    <div class="test-mode-container">
+      <button id="btn-test-mode" type="button">Test Mode</button>
     </div>
 
     <script src="./renderer.js"></script>
