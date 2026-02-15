@@ -9,6 +9,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getFolderPath: () => ipcRenderer.invoke("get-folder-path"),
   startWatcher: () => ipcRenderer.invoke("start-watcher"),
   rescanFolder: () => ipcRenderer.invoke("rescan-folder"),
+
+  // Medical Folder API
+  selectMedicalFolder: () => ipcRenderer.invoke("select-medical-folder"),
+  getMedicalFolderPath: () => ipcRenderer.invoke("get-medical-folder-path"),
+  startMedicalWatcher: () => ipcRenderer.invoke("start-medical-watcher"),
+  rescanMedicalFolder: () => ipcRenderer.invoke("rescan-medical-folder"),
+
   toggleTestMode: () => ipcRenderer.invoke("toggle-test-mode"),
   openURL: (url) => ipcRenderer.invoke("open-url", url),
   receive: (channel, func) => {

@@ -8,6 +8,11 @@ const {
   readPathFromFile,
   rescanFolder,
   toggleTestMode,
+  // New Medical Functions
+  initMedicalWatcher,
+  selectMedicalFolder,
+  rescanMedicalFolder,
+  readMedicalPathFromFile,
 } = require("./app.js");
 const { dialog, shell } = require("electron");
 
@@ -64,6 +69,24 @@ const handleToggleTestMode = (event) => {
   return toggleTestMode(event);
 };
 
+// Medical Handlers
+const handleGetMedicalFolderPath = (event) => {
+  return readMedicalPathFromFile();
+};
+
+const handleStartMedicalWatcher = (event) => {
+  return initMedicalWatcher(event);
+};
+
+const handleSelectMedicalFolder = (event) => {
+  // This function in app.js handles dialog + saving + starting watcher
+  return selectMedicalFolder(event);
+};
+
+const handleRescanMedicalFolder = (event) => {
+  return rescanMedicalFolder(event);
+};
+
 const handleOpenURL = (event, url) => {
   shell.openExternal(url);
 };
@@ -75,6 +98,13 @@ app.whenReady().then(() => {
   ipcMain.handle("restart-switch", handleRestartSwitch);
   ipcMain.handle("select-folder", handleSelectFolder);
   ipcMain.handle("get-folder-path", handleGetFolderPath);
+
+  // New IPC Handlers
+  ipcMain.handle("start-medical-watcher", handleStartMedicalWatcher);
+  ipcMain.handle("select-medical-folder", handleSelectMedicalFolder);
+  ipcMain.handle("get-medical-folder-path", handleGetMedicalFolderPath);
+  ipcMain.handle("rescan-medical-folder", handleRescanMedicalFolder);
+
   ipcMain.handle("open-url", handleOpenURL);
   ipcMain.handle("toggle-test-mode", handleToggleTestMode);
   createWindow();

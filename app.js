@@ -7,12 +7,14 @@ const crypto = require("crypto");
 
 // Variables
 let folderPath = null;
+let medicalFolderPath = null; // New variable for Medical Studies folder
 const PROD_URL = "https://uploader-app-service-tpdnlyeuqa-uc.a.run.app/api";
 const TEST_URL = "http://localhost:8000/api";
 let currentApiUrl = PROD_URL; // Default to PROD
 let testModeTimeout = null;
 
 const dummyToken = "dummy-auth-token";
+const API_KEY = "123456xyz-HGTYN-abcde-7890";
 
 // Helper to get URL
 const getApiUrl = () => currentApiUrl;
@@ -69,7 +71,7 @@ const errorLogger = (
   });
 };
 
-// Function to upload a file to the API
+// Function to upload a file to the API (Laboratorios)
 let status = "ON";
 async function uploadFile(filePath, event) {
   // Get the file extension and name
@@ -124,6 +126,7 @@ async function uploadFile(filePath, event) {
       },
       {
         headers: {
+          "x-api-key": API_KEY,
           Authorization: `Bearer ${dummyToken}`,
           "Content-Type": "application/json",
         },
@@ -157,6 +160,105 @@ async function uploadFile(filePath, event) {
         fileExtension,
         fileName,
       );
+      if (status !== "OFF") {
+        event.sender.send("from-main", "OFF");
+        status = "OFF";
+      }
+    }
+  }
+}
+
+// Function to upload a Medical Study file to the API
+async function uploadMedicalFile(filePath, event) {
+  // Get the file extension and name
+  const fileExtension = path.extname(filePath);
+  const fileName = path.basename(filePath);
+
+  // Check if the file extension is allowed
+  const allowedExtensions = [".jpg", ".jpeg", ".png", ".pdf"];
+  if (!allowedExtensions.includes(fileExtension.toLowerCase())) {
+    return;
+  }
+
+  try {
+    // Check file stats first
+    const stats = await fs.stat(filePath);
+    const mtime = stats.mtime;
+
+    // Safety check: Limit file size to 300MB
+    const fileSizeInMB = stats.size / (1024 * 1024);
+    if (fileSizeInMB > 300) {
+      errorLogger(
+        "File too large (>300MB)",
+        "Skipped by client safety limit",
+        fileExtension,
+        fileName,
+      );
+      return;
+    }
+
+    // Read the file data
+    const fileData = await fs.readFile(filePath);
+
+    // Convert to base64
+    const base64Data = fileData.toString("base64");
+
+    // Create a hash of the file data
+    const hash = crypto.createHash("sha256");
+    // SHA256(NombreArchivo + FechaModificación + ContenidoFile)
+    hash.update(fileName + mtime.getTime());
+    hash.update(base64Data);
+    const fileHash = hash.digest("hex");
+
+    // Send the file data to the Medical Endpoint
+    await axios.post(
+      getApiUrl() + "/medical-order-upload",
+      {
+        fileData: base64Data,
+        fileExtension,
+        fileName,
+        fileHash,
+      },
+      {
+        headers: {
+          "x-api-key": API_KEY, // Uses the same key as labs
+          Authorization: `Bearer ${dummyToken}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    // Log success internally if needed, or update status if it was OFF
+    if (status !== "ON") {
+      event.sender.send("from-main", "ON");
+      status = "ON";
+    }
+  } catch (error) {
+    const statusCode = error?.response?.status;
+    const serverMessage = error?.response?.data?.message;
+
+    // 400 Bad Request: Probably duplicate
+    if (statusCode === 400) {
+      // console.warn(`Medical Upload Duplicate/Invalid: ${fileName}`);
+      return;
+    }
+
+    const knownErrors = [
+      "File already exists",
+      "Invalid file format",
+      "Invalid file data",
+    ];
+
+    if (knownErrors.includes(serverMessage)) {
+      // Ignore known errors
+      return;
+    }
+
+    // Authentications errors or server errors
+    errorLogger(error?.message, serverMessage, fileExtension, fileName);
+
+    if (statusCode === 403) {
+      // Critical Auth Error
       if (status !== "OFF") {
         event.sender.send("from-main", "OFF");
         status = "OFF";
@@ -292,11 +394,130 @@ const stopWatcher = () => {
   }
 };
 
+// Function to write the path to the medical folder to a file
+const writeMedicalPathToFile = (filePath) => {
+  const dir = path.join(__dirname, "./config");
+
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  fs.writeFile(path.join(dir, "medicalFolderPath.txt"), filePath, (err) => {
+    if (err) throw err;
+  });
+};
+
+// Function to read the medical path from the file
+const readMedicalPathFromFile = () => {
+  const configPath = path.join(__dirname, "./config/medicalFolderPath.txt");
+  if (!fs.existsSync(configPath)) return null;
+  return fs.readFileSync(configPath, "utf8");
+};
+
+// Watch the medical folder for changes
+let watcherInstanceMedical = null;
+
+// Function to start the medical watcher
+const startMedicalWatcher = async (folderPath, event) => {
+  if (watcherInstanceMedical) {
+    watcherInstanceMedical.close();
+  }
+  // Ignore initial to avoid huge uploads on startup
+  watcherInstanceMedical = chokidar.watch(folderPath, { ignoreInitial: true });
+  watcherInstanceMedical.on("add", async (filePath) => {
+    try {
+      await uploadMedicalFile(filePath, event);
+    } catch (error) {
+      console.error("Error uploading medical file:", error.message);
+    }
+  });
+  return;
+};
+
+// Function to initialize medical watcher (if path exists)
+const initMedicalWatcher = async (event) => {
+  medicalFolderPath = readMedicalPathFromFile();
+  try {
+    if (
+      medicalFolderPath &&
+      medicalFolderPath !== "" &&
+      fs.existsSync(medicalFolderPath)
+    ) {
+      return await startMedicalWatcher(medicalFolderPath, event);
+    }
+    // If not exists, we just don't start it yet. User has to select folder manually.
+  } catch (error) {
+    console.error("Error starting medical watcher:", error.message);
+  }
+};
+
+// Function to manually rescan the medical folder
+const rescanMedicalFolder = async (event) => {
+  const currentFolderPath = readMedicalPathFromFile();
+  if (
+    !currentFolderPath ||
+    currentFolderPath === "" ||
+    !fs.existsSync(currentFolderPath)
+  ) {
+    return;
+  }
+
+  try {
+    const files = await fs.readdir(currentFolderPath);
+    for (const file of files) {
+      const fullPath = path.join(currentFolderPath, file);
+      try {
+        const stats = await fs.stat(fullPath);
+        if (stats.isFile()) {
+          await uploadMedicalFile(fullPath, event);
+        }
+      } catch (err) {
+        console.error(
+          "Error processing medical file during scan:",
+          file,
+          err.message,
+        );
+      }
+    }
+  } catch (error) {
+    console.error("Error rescanning medical folder:", error.message);
+  }
+};
+
+// Function to stop the medical watcher
+const stopMedicalWatcher = () => {
+  if (watcherInstanceMedical) {
+    watcherInstanceMedical.close();
+    watcherInstanceMedical = null;
+  }
+};
+
+// Function to select medical folder via Dialog
+const selectMedicalFolder = async (event) => {
+  const result = await dialog.showOpenDialog({
+    properties: ["openDirectory"],
+  });
+  if (!result.canceled) {
+    writeMedicalPathToFile(result.filePaths[0]);
+    medicalFolderPath = result.filePaths[0];
+    await startMedicalWatcher(medicalFolderPath, event);
+    return medicalFolderPath;
+  }
+  return null;
+};
+
 //export the watcher and stop watcher functions
 module.exports = {
   watcher,
   stopWatcher,
   watcherInstance,
+  // New Medical Exports
+  initMedicalWatcher,
+  stopMedicalWatcher,
+  selectMedicalFolder,
+  rescanMedicalFolder,
+  readMedicalPathFromFile,
+  // Existing
   fileSearch,
   writePathToFile,
   readPathFromFile,

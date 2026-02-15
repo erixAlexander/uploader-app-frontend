@@ -1,12 +1,18 @@
 const restartBtn = document.getElementById("btn-restart");
-const statustext = document.getElementById("status");
+// Old status element replaced by badge
+const statusBadge = document.getElementById("status-badge");
+const statusTextLabel = document.getElementById("status-text");
+
 const searchInput = document.getElementById("search");
 const searchBtn = document.getElementById("btn-search");
 const searcResult = document.getElementById("search-result");
-const selectFolderBtn = document.getElementById("btn-div");
+const selectFolderBtn = document.getElementById("btn-select-labs"); // Updated ID
 const rescanBtn = document.getElementById("btn-rescan");
-const pathText = document.getElementById("tag-path");
+const pathText = document.getElementById("path-display-labs"); // Updated ID
 const testModeBtn = document.getElementById("btn-test-mode");
+// Medical Elements
+const selectMedicalFolderBtn = document.getElementById("btn-select-medical"); // Updated ID
+const medicalPathText = document.getElementById("path-display-medical"); // Updated ID
 
 let appStatus = null;
 
@@ -27,13 +33,17 @@ window.addEventListener("DOMContentLoaded", async () => {
     window.electronAPI.receive("from-main", (value) => {
       appStatus = value;
       if (value === "ON") {
-        statustext.innerText = "ON";
-        statustext.classList.add("on");
-        statustext.classList.remove("off");
+        if (statusTextLabel) statusTextLabel.innerText = "SISTEMA ACTIVO";
+        if (statusBadge) {
+          statusBadge.classList.add("on");
+          statusBadge.classList.remove("off");
+        }
       } else {
-        statustext.innerText = "OFF";
-        statustext.classList.add("off");
-        statustext.classList.remove("on");
+        if (statusTextLabel) statusTextLabel.innerText = "SISTEMA DETENIDO";
+        if (statusBadge) {
+          statusBadge.classList.add("off");
+          statusBadge.classList.remove("on");
+        }
 
         // Set a timeout to check the status a few minutes later
         setTimeout(
@@ -54,12 +64,14 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     // Start watcher
     await window.electronAPI.startWatcher();
+    // Start Medical Watcher
+    await window.electronAPI.startMedicalWatcher();
 
     // Add listener to rescan button
     rescanBtn.addEventListener("click", async () => {
       // Create a temporary message element for loading state
       const message = document.createElement("div");
-      message.innerText = "Escaneando carpeta...";
+      message.innerText = "Escaneando carpetas...";
       message.style.position = "fixed";
       message.style.top = "20px";
       message.style.left = "50%";
@@ -74,9 +86,10 @@ window.addEventListener("DOMContentLoaded", async () => {
 
       try {
         await window.electronAPI.rescanFolder();
+        await window.electronAPI.rescanMedicalFolder();
 
         // Update message to success state
-        message.innerText = "Carpeta reescaneada correctamente";
+        message.innerText = "Carpetas reescaneadas correctamente";
         message.style.backgroundColor = "#4caf50"; // Green for success
 
         // Remove the message after 10 seconds
@@ -100,9 +113,19 @@ window.addEventListener("DOMContentLoaded", async () => {
       }
     });
 
-    // Get folder path
+    // Get Labs folder path
     const folderPath = await window.electronAPI.getFolderPath();
-    pathText.innerText = folderPath;
+    if (folderPath && folderPath !== "") {
+      pathText.innerText = folderPath;
+    }
+
+    // Get Medical Folder Path
+    const medicalFolderPath = await window.electronAPI.getMedicalFolderPath();
+    if (medicalFolderPath) {
+      medicalPathText.innerText = medicalFolderPath;
+    } else {
+      medicalPathText.innerText = "No seleccionado";
+    }
 
     // Check status every hour and restart watcher if status is "OFF"
     setInterval(
@@ -199,14 +222,26 @@ restartBtn.addEventListener("click", async () => {
 });
 
 selectFolderBtn.addEventListener("click", async () => {
+  // console.log("Selecting Laboratories folder...");
   try {
     const folderPath = await window.electronAPI.selectFolder();
-    if (!folderPath || folderPath === "") {
-      return;
+    if (folderPath && folderPath !== "") {
+      pathText.innerText = folderPath;
+      await window.electronAPI.restartSwitch(); // Rescan main folder
     }
-    pathText.innerText = folderPath;
-    await window.electronAPI.restartSwitch();
   } catch (error) {
-    console.error(error);
+    console.error("Error selecting Laboratories folder:", error);
+  }
+});
+
+selectMedicalFolderBtn.addEventListener("click", async () => {
+  // console.log("Selecting Medical folder...");
+  try {
+    const folderPath = await window.electronAPI.selectMedicalFolder();
+    if (folderPath && folderPath !== "") {
+      medicalPathText.innerText = folderPath;
+    }
+  } catch (error) {
+    console.error("Error selecting Medical folder:", error);
   }
 });

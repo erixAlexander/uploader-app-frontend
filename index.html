@@ -10,15 +10,33 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="path-container">
-      <div id="btn-div" class="btn-div">
-        <img id="btn-path" src="./public/folder-solid.svg" alt="folder-icon" />
+    <!-- Main Container for Folder Selection -->
+    <div class="folders-container">
+      <!-- Row 1: Laboratories -->
+      <div class="folder-row">
+        <span class="folder-label">Laboratorios:</span>
+        <div id="btn-select-labs" class="folder-btn">
+          <img src="./public/folder-solid.svg" alt="folder-icon" />
+        </div>
+        <p id="path-display-labs" class="path-text">No seleccionado</p>
       </div>
-      <p id="tag-path"></p>
+
+      <!-- Row 2: Medical Studies -->
+      <div class="folder-row">
+        <span class="folder-label">Estudios:</span>
+        <div id="btn-select-medical" class="folder-btn">
+          <img src="./public/folder-solid.svg" alt="folder-icon" />
+        </div>
+        <p id="path-display-medical" class="path-text">No seleccionado</p>
+      </div>
     </div>
 
     <div class="status-container">
-      <span class="status-text on" id="status">ON</span>
+      <div id="status-badge" class="status-badge on">
+        <span class="status-indicator"></span>
+        <span id="status-text">SISTEMA ACTIVO</span>
+      </div>
+
       <div class="btns-container">
         <button id="btn-restart" type="button">Reiniciar</button>
         <button id="btn-rescan" type="button">Rescanear</button>

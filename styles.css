@@ -22,50 +22,98 @@ body {
   gap: 1rem;
 }
 
-.status-text {
-  font-size: 2.8rem;
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem; /* Much smaller padding */
+  border-radius: 6px; /* Slightly rounded, not pill */
   font-weight: 500;
-  font-weight: bold;
-  margin-bottom: 1rem;
-  margin-top: 1rem;
+  font-size: 0.9rem; /* Smaller font */
+  margin-bottom: 1.5rem;
+  margin-top: 0.5rem;
+  /* Removed min-width to fit content naturally */
 }
 
-.off {
-  color: #ff0000;
+.status-indicator {
+  display: block;
+  width: 8px; /* Smaller dot */
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-.on {
-  color: #3169d0;
+/* ON State - Matte dark teal/slate for a modern look */
+.status-badge.on {
+  background-color: #e3eff3; /* Very subtle slate blue background */
+  color: #2c5282; /* Muted dark blue/slate text */
+  border: 1px solid #bee3f8;
+}
+
+.status-badge.on .status-indicator {
+  background-color: #3182ce; /* Matte Blue dot */
+  box-shadow: 0 0 0 2px rgba(49, 130, 206, 0.2);
+}
+
+/* OFF State - Matte warm grey/red */
+.status-badge.off {
+  background-color: #fff5f5;
+  color: #9b2c2c; /* Wine red (darker, matte) */
+  border: 1px solid #fed7d7;
+}
+
+.status-badge.off .status-indicator {
+  background-color: #e53e3e; /* Matte Red */
+  box-shadow: 0 0 0 2px rgba(229, 62, 62, 0.2);
 }
 
 #btn-restart {
-  padding: 0.5rem 1rem;
-  font-size: 1.2rem;
-  font-weight: 500;
+  padding: 0.6rem 1.2rem; /* Slight padding increase for modern look */
+  font-size: 1rem; /* Smaller font */
+  font-weight: 600;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px; /* More rounded */
   cursor: pointer;
-  background-color: #3169d0;
+  background-color: #4a6fa5; /* Matte Blue */
   color: #fff;
+  transition:
+    background-color 0.2s,
+    transform 0.1s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 #btn-restart:hover {
-  background-color: #1f59c0;
+  background-color: #3b5c8d;
+  transform: translateY(-1px);
+}
+
+#btn-restart:active {
+  transform: scale(0.98);
 }
 
 #btn-rescan {
-  padding: 0.5rem 1rem;
-  font-size: 1.2rem;
-  font-weight: 500;
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  font-weight: 600;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
   cursor: pointer;
-  background-color: #04995b;
+  background-color: #28a745; /* Matte Green */
   color: #fff;
+  transition:
+    background-color 0.2s,
+    transform 0.1s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 #btn-rescan:hover {
-  background-color: #047647;
+  background-color: #218838;
+  transform: translateY(-1px);
+}
+
+#btn-rescan:active {
+  transform: scale(0.98);
 }
 
 .search-container {
@@ -144,38 +192,78 @@ body {
   fill: #1f59c0; /* Replace with your desired color */
 }
 
-.btn-div {
-  display: inline-block;
-  padding: 10px 20px;
-  background-color: #cdcdcd; /* Change to your desired color */
-  color: white;
-  text-align: center;
-  text-decoration: none;
-  font-size: 16px;
-  margin: 4px 2px;
-  cursor: pointer;
-  border: none;
-  border-radius: 4px;
-  transition-duration: 0.4s;
-  margin-left: 20px;
-  margin-top: 10px;
+.folders-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px; /* Reduced gap to exactly what was requested */
+  margin: 1.5rem 0;
+  width: 100%;
 }
 
-.btn-div:hover {
-  background-color: #9a9a9a;
-}
-
-.path-container {
+.folder-row {
   display: flex;
   justify-content: flex-start;
   align-items: center;
+  width: 90%;
+  max-width: 600px;
   gap: 1rem;
+  padding: 0.5rem; /* Re-added padding for breathing room if hovered, but no border */
 }
 
-.path-container p {
-  font-size: 0.8rem;
+.folder-label {
+  font-size: 1rem;
+  font-weight: 600;
+  min-width: 120px;
+  text-align: right;
+  color: #444;
+}
+
+.folder-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 2.2rem;
+  height: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  transition: all 0.2s ease;
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+.folder-btn:hover {
+  background-color: #f8f9fa;
+  transform: translateY(-1px);
+  border-color: #d0d0d0;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.folder-btn:active {
+  transform: scale(0.96);
+}
+
+.folder-btn img {
+  width: 1.2rem;
+  height: auto;
+  opacity: 0.7;
+}
+
+.path-text {
+  font-size: 0.9rem;
   font-weight: 400;
-  margin-bottom: 1rem;
+  color: #666;
+  word-break: break-all;
+  flex: 1;
+  padding: 0.5rem;
+  background-color: #f8f9fa; /* Subtle background for path */
+  border-radius: 4px;
+  border: 1px solid #eee;
+  min-height: 1.2rem; /* Ensure it has height even if empty */
+  display: flex;
+  align-items: center;
 }
 
 .link-container {
