@@ -71,6 +71,28 @@ const errorLogger = (
   });
 };
 
+// Function to check if file exists (Pre-Check)
+const checkFileExists = async (fileHash, type) => {
+  try {
+    const response = await axios.post(
+      getApiUrl() + "/check-file-exists",
+      { fileHash, type },
+      {
+        headers: {
+          "x-api-key": API_KEY,
+          Authorization: `Bearer ${dummyToken}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+    return response.data.exists;
+  } catch (error) {
+    // If check fails, we assume it doesn't exist (or let the main upload fail naturally)
+    // console.error("Pre-check failed:", error.message);
+    return false;
+  }
+};
+
 // Function to upload a file to the API (Laboratorios)
 let status = "ON";
 async function uploadFile(filePath, event) {
@@ -114,6 +136,14 @@ async function uploadFile(filePath, event) {
     hash.update(fileName + mtime.getTime());
     hash.update(base64Data);
     const fileHash = hash.digest("hex");
+
+    // NEW PRE-CHECK: Duplicate check before uploading
+    console.log(`Checking if ${fileName} exists in Labs...`);
+    const exists = await checkFileExists(fileHash, "lab");
+    console.log(`File ${fileName} check result: ${exists}`);
+    if (exists) {
+      console.log(`Skipping ${fileName}: Already exists in Labs.`);
+    }
 
     // Send the file data to the API
     await axios.post(
@@ -209,6 +239,15 @@ async function uploadMedicalFile(filePath, event) {
     hash.update(fileName + mtime.getTime());
     hash.update(base64Data);
     const fileHash = hash.digest("hex");
+
+    // NEW PRE-CHECK: Duplicate check before uploading
+    console.log(`Checking if ${fileName} exists in Medical Studies...`);
+    const exists = await checkFileExists(fileHash, "study");
+    console.log(`File ${fileName} check result: ${exists}`);
+    if (exists) {
+      console.log(`Skipping ${fileName}: Already exists in Medical Studies.`);
+      return;
+    }
 
     // Send the file data to the Medical Endpoint
     await axios.post(
